@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import numpy as np
 
 class ConvolutionalWasserstein2D(nn.Module):
-    def __init__(self, nin, s, gamma, extra_cost=None, extra_costT=None):
+    def __init__(self, nin, s, gamma, customH=None, customHT=None):
         super().__init__()
         self.a = torch.ones(1, nin, s, s) #/(s*s)
         self.s = s
@@ -20,12 +20,14 @@ class ConvolutionalWasserstein2D(nn.Module):
             g_s = s+1
 
         
-        if extra_cost is not None:
-            self.H = (lambda x: tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))(x) + extra_cost(x)) # changed to mult
-            if extra_costT is None:
-                self.HT = self.H
+        if customH is not None:
+            self.H = customH
+            #self.H = (lambda x: tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))(x) + extra_cost(x)) # changed to mult
+            if customHT is None:
+                self.HT = customH
             else:
-                self.HT = (lambda x: tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))(x) + extra_costT(x)) # changed to mult
+                self.HT = customHT #(lambda x: tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))(x) + extra_costT(x)) # changed to mult
+
         else:
             self.H = tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))
             self.HT = tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))
