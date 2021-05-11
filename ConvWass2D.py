@@ -19,7 +19,6 @@ class ConvolutionalWasserstein2D(nn.Module):
         if s % 2 == 0:
             g_s = s+1
 
-        
         if customH is not None:
             self.H = customH
             #self.H = (lambda x: tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))(x) + extra_cost(x)) # changed to mult
