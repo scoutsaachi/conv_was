@@ -51,13 +51,13 @@ def make_K_3D(gamma, alpha, R, matched_points, dims=[28, 28, 28]): #numr=28, num
     # First image
     rdists = (matched_points[:, 0, 0].view(num_mps, 1) - rA.view(1, numr))**2
     cdists = (matched_points[:, 0, 1].view(num_mps, 1) - rB.view(1, numc))**2
-    ddists = (matched_points[:, 0, 1].view(num_mps, 1) - rC.view(1, numd))**2
+    ddists = (matched_points[:, 0, 2].view(num_mps, 1) - rC.view(1, numd))**2
     matched_point_distsA = torch.sqrt(rdists.view(num_mps,numr,1,1) + cdists.view(num_mps,1,numc,1) + ddists.view(num_mps,1,1,numd))
 
     # Second image
     rdists = (matched_points[:, 1, 0].view(num_mps, 1) - rA.view(1, numr))**2
     cdists = (matched_points[:, 1, 1].view(num_mps, 1) - rB.view(1, numc))**2
-    ddists = (matched_points[:, 1, 1].view(num_mps, 1) - rC.view(1, numd))**2
+    ddists = (matched_points[:, 1, 2].view(num_mps, 1) - rC.view(1, numd))**2
     matched_point_distsB = torch.sqrt(rdists.view(num_mps,numr,1,1) + cdists.view(num_mps,1,numc,1) + ddists.view(num_mps,1,1,numd))
 
     # threshold on matched_point_dists by R:

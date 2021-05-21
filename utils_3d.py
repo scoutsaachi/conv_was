@@ -5,12 +5,47 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 
-def read_offset_and_normalize(path):
-    v_2, f_2, _ = igl.read_off(path)
+# def make_triangles(v, f):
+#     triangles = v[f.flatten()].reshape(f.shape[0], f.shape[1], 3)
+#     return triangles
+
+# def read_offset_and_normalize(path):
+#     v_2, f_2, _ = igl.read_off(path)
+#     v_2 = torch.tensor(v_2).cuda()
+#     f_2 = torch.tensor(f_2).cuda()
+#     v_2 = v_2 - v_2.min()
+#     v_2 = v_2 / v_2.max()
+#     return v_2, f_2
+
+# def read_offset_and_normalize(path, off_type='off'):
+#     if off_type=='off':
+#         v_2, f_2, _ = igl.read_off(path)
+#     elif off_type=='obj':
+#         v_2, _, _, f_2, _, _ = igl.read_obj(path)
+#     v_2 = torch.tensor(v_2).cuda()
+#     f_2 = torch.tensor(f_2).cuda()
+#     v_2 = v_2 - v_2.min()
+#     v_2 = v_2 / v_2.max()
+#     triangles = v_2[f_2.flatten()].reshape(f_2.shape[0], f_2.shape[1], 3)
+#     return v_2, f_2, triangles
+
+def read_offset_and_normalize_custom(path, off_type='off'):
+    if off_type=='off':
+        v_2, f_2, _ = igl.read_off(path)
+    elif off_type=='obj':
+        v_2, _, _, f_2, _, _ = igl.read_obj(path)
     v_2 = torch.tensor(v_2).cuda()
     f_2 = torch.tensor(f_2).cuda()
-    v_2 = v_2 - v_2.min()
-    v_2 = v_2 / v_2.max()
+    for i in range(3):
+        v_2[:, i] = v_2[:, i] - v_2[:, i].min()
+    ranges = v_2.max(dim=0)[0]
+    max_ind = torch.argmax(ranges)
+    max_len = ranges[max_ind]
+    scale_factor = 1/max_len
+    v_2 *= scale_factor
+    for i in range(3):
+        axis_range = v_2[:, i].max() - v_2[:, i].min()
+        v_2[:, i] += (1-axis_range)/2
     triangles = v_2[f_2.flatten()].reshape(f_2.shape[0], f_2.shape[1], 3)
     return v_2, f_2, triangles
 
