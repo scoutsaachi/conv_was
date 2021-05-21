@@ -21,11 +21,10 @@ class ConvolutionalWasserstein2D(nn.Module):
 
         if customH is not None:
             self.H = customH
-            #self.H = (lambda x: tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))(x) + extra_cost(x)) # changed to mult
             if customHT is None:
                 self.HT = customH
             else:
-                self.HT = customHT #(lambda x: tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))(x) + extra_costT(x)) # changed to mult
+                self.HT = customHT 
 
         else:
             self.H = tgm.image.GaussianBlur((g_s, g_s), (gamma, gamma))
@@ -39,7 +38,7 @@ class ConvolutionalWasserstein2D(nn.Module):
             w = mu_1 /(self.HT(self.a*v)) # changed this one to HT
         out = mu_0 * torch.log(v) + mu_1 * torch.log(w)
         out = torch.flatten(out, 2, 3).unsqueeze(3)
-        a = torch.flatten(out, 2, 3).unsqueeze(2)
+        a = torch.flatten(self.a, 2, 3).unsqueeze(2)
         out = (a @ out).squeeze(2).squeeze(2)
         if return_plan:
             return self.gamma * out, v, w
@@ -81,8 +80,7 @@ class ConvolutionalWasserstein2D(nn.Module):
         # mu is C x H x W
         # H0 is C 
         C, H, W = mu.shape
-        
-        # Doing this unbatched in C for now
+        # Doing this unbatched in C 
         betas = torch.ones(C)
         for i in range(C):
             if self.compute_entropy(mu[i,...]) + torch.sum(mu[i, ...]*self.a[0, i, ...]) > H0[i] + 1:
@@ -95,7 +93,7 @@ class ConvolutionalWasserstein2D(nn.Module):
         sharpened = torch.pow(mu, betas.view(C, 1, 1))
         return sharpened
     
-    def wass_barycenter(self, mu_s, alphas, iters, entropic_args=None): # NOT BATCHED
+    def wass_barycenter(self, mu_s, alphas, iters, entropic_args=None, H_all=None, HT_all=None, verbose=False, return_plan=False, plots=False): # NOT BATCHED
         # mu_s is K x C x H x W
         # alphas is K
         # M is the number of mu_s
@@ -110,15 +108,38 @@ class ConvolutionalWasserstein2D(nn.Module):
         v = torch.ones_like(mu_s)
         w = torch.ones_like(mu_s)
         for j in range(iters):
-            w = mu_s / self.HT(self.a * v) # changed to HT
-            d = v * self.H(self.a * w)
+            # v contains an extra dimension! HT for batch and unique
+            if H_all is not None:
+                w = mu_s / HT_all(self.a * v) # changed to HT # HT_all
+                if plots: # For debugging!
+                    got = HT_all(self.a*v)
+                    should = self.HT(self.a * v)
+                    print('relative error in application', torch.norm(got-should)/torch.norm(should))
+                    print('j', j)
+                    plt.figure()
+                    plt.subplot(121)
+                    plt.imshow(got[0, 0, ...].cpu(),vmin=allmin,vmax=allmax)
+                    plt.title('got from matrix version')
+                    plt.colorbar()
+                    plt.subplot(122)
+                    plt.imshow(should[0, 0, ...].cpu(),vmin=allmin,vmax=allmax)
+                    plt.title('got from geom blurring func')
+                    plt.colorbar()
+                    plt.show()
+                d = v * H_all(self.a * w) # H_all
+            else:
+                w = mu_s / self.HT(self.a * v) # changed to HT
+                d = v * self.H(self.a * w)
             mu = torch.ones(C, H, W)
             for i in range(K):
                 mu = mu * torch.pow(d[i], alphas[i])
             if entropic_args is not None:
                 mu = self.entropic_sharpening(mu, H0)
             v = (v * mu.unsqueeze(0))/d
-        return mu
+        if return_plan:
+            return mu, v, w
+        else:
+            return mu
     
     def wass_barycenter_obj(self, mu, mu_s, alphas):
         # mu_s is K x C x H x W
